@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Export generator="Cache" version="22" zv="Cache for Windows (x86-32) 2008.2 (Build 526U)" ts="2009-07-16 22:10:49">
+<Export generator="Cache" version="22" zv="Cache for Windows (x86-32) 2008.2 (Build 526U)" ts="2009-07-19 19:15:42">
 <Class name="Ensemblisms.Episode4.Twitter">
 <Description>
 Ensemblisms Episode IV: Twache`, A Simple Twitter Utility.
@@ -8,7 +8,7 @@ Woot, have fun.
 This Class is shared without any warranty written or implied.</Description>
 <IncludeCode>%occXSLT</IncludeCode>
 <Super>%RegisteredObject,%XML.Adaptor</Super>
-<TimeChanged>61558,79836.701379</TimeChanged>
+<TimeChanged>61561,69265.747136</TimeChanged>
 <TimeCreated>61556,60350.705138</TimeCreated>
 
 <Method name="SendTweet">
@@ -18,11 +18,17 @@ This Class is shared without any warranty written or implied.</Description>
 <Implementation><![CDATA[
 	
 	Set sc = $$$OK
-	
+			
+			// Setup a response stream object so we can fill it and read it later
 			Set responseStream = ##class(%Stream.GlobalBinary).%New()
+			
+			// Lets open up a credentials item we put in the SMP
 			set cred = ##class(Ens.Config.Credentials).%OpenId(Credential)
 		
+			// Build our HTTP request, this is essentially a RESTFUL "Create"
 			Set request = ##class(%Net.HttpRequest).%New()
+			
+			// Keep shaping our object, here is some no brainer stuff for HTTP
 			Set request.Server = "twitter.com"
 			Set request.Port = "80"
 			
@@ -30,14 +36,15 @@ This Class is shared without any warranty written or implied.</Description>
 			Set request.Username = cred.Username
 			Set request.Password = cred.Password
 			
-
+			// Here, lets build a request object to send to twitter
 			Set requestStream = ##class(%GlobalBinaryStream).%New()	
-    		
-    		
+    	
+    		// For some reason, I dont like to use the named param that came in
+    		// work with me here.
             Set tweetstatus = Tweet 
             
-            /// "Testing the Object Script Method"
-              
+             
+            // Lets modify the request object, HTTP stuff again, params, body and content.
             Do request.SetParam("status",tweetstatus) 
             Set request.EntityBody = requestStream
 			Set request.ContentType = "text/xml"
@@ -47,23 +54,25 @@ This Class is shared without any warranty written or implied.</Description>
 			Set sc = request.Post("/statuses/update.xml")			
 			Quit:$System.Status.IsError(sc)
 			
+			// copy the request.response into the responsestream we built (unnatural, isnt it?)
 			Set sc = responseStream.CopyFrom(request.HttpResponse.Data)
             Quit:$System.Status.IsError(sc)
             
           
-            
+            // Hey, thats XML in that stream, lets copy it into an XML DOC!
 			Set sc = ##class(%XML.XPATH.Document).CreateFromStream(responseStream, .xmlDoc)	
 			Quit:$System.Status.IsError(sc)
 			
 			
-			
+			// Read it.  
 			Set response = request.HttpResponse.Data.Read()
 			
+			// XPATH baby, lets grab a node value.
 			Set blar = xmlDoc.EvaluateExpression("/","/status/text/text()", .results)
 			
 			
 		    
-				
+						// Rare error checking for a screencast
 						If $IsObject(results) {
 										
 								Set tresponse = results.GetAt(1)
@@ -71,6 +80,8 @@ This Class is shared without any warranty written or implied.</Description>
 																
 						}
 						
+						// Here I do a check to make sure things are ok.  In the Twitter API, you
+						// get your post string back if its successful.
 						If ( tresponse.Value = Tweet ) {
 							
 								Set sc = $$$OK
